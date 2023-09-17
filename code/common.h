@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <map>
 #include <ctime>
 
@@ -84,7 +85,7 @@ const std::map<int,  mini_time> timezone_utc =
     {50400, mini_time{"+14:00"}}
 };
 
-inline const std::string& GetStringTime(const int timezone) {
+inline const std::string GetStringTime(const int timezone) {
     time_t unix_time = time(NULL);
     tm* utc_time = gmtime(&unix_time);
     const mini_time shift_time = timezone_utc.at(timezone);

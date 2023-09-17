@@ -10,6 +10,10 @@
 #include <string_view>
 #include <iostream>
 #include <locale>
+#include <cstdio>
+#include <cstdlib>
+
+#include <filesystem>
 
 using namespace std::literals;
 
@@ -17,7 +21,7 @@ using namespace std::literals;
 
 const int64_t admin_id = /* admin id */;
 const std::string ERROR_CODE = "404";
-const char BOT_TOKEN[] = /* bot token */;
+const char BOT_TOKEN[] = ""/* bot token */;
 bool work_permisson = true;
 
 /* */
@@ -29,7 +33,13 @@ int main() {
     TgBot::Bot bot(BOT_TOKEN);
 
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
-        bot.getApi().sendMessage(message->chat->id, "Hi, " + message->chat->firstName + '!');
+        if(message->chat->firstName.empty()) {
+            bot.getApi().sendMessage(message->chat->id, "Hi!");
+        }
+        else {
+            bot.getApi().sendMessage(message->chat->id, "Hi, " + message->chat->firstName + '!');
+        }
+        
     });
 
     bot.getEvents().onCommand("sleep", [&bot](TgBot::Message::Ptr message){
@@ -73,6 +83,28 @@ int main() {
         + "\nTime in this city : " + str_time));
     });
 
+    bot.getEvents().onCommand("lession", [&bot](TgBot::Message::Ptr message) {
+        // сегодня завтра пн вт ср чт пт // текущей недели
+
+        std::string_view lession_query = message->text;
+        const std::string lession_str = "/lession";
+        if(!(lession_str.size() + 1 < lession_query.size())) {
+            bot.getApi().sendMessage(message->chat->id, "Please, write correct query(сегодня завтра пн вт ср чт пт).");
+            return;
+        }
+
+        std::string query_day = message->text.substr("/weather"s.size() + 1, message->text.npos);
+
+
+        const std::string photoFilePath = "Friday.jpg";
+        const std::string photoMimeType = "image/jpeg";
+
+        std::cout << std::filesystem::path(photoFilePath).filename().string() << std::endl;
+
+        std::cout << "sendPhoto" << std::endl;
+        bot.getApi().sendPhoto(message->chat->id, TgBot::InputFile::fromFile(photoFilePath, photoMimeType));
+    });
+
     bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
 
         printf("User wrote %s\n", message->text.c_str());
@@ -80,11 +112,6 @@ int main() {
             return;
         }
         bot.getApi().sendMessage(message->chat->id, "I don't understand this : " + message->text + ". Please, write correct query.");
-    });
-
-    bot.getEvents().onCommand("lession", [&bot](TgBot::Message::Ptr message) {
-        // сегодня завтра пн вт ср чт пт // текущей недели
-
     });
 
     //
