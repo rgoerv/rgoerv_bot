@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include <map>
 #include <ctime>
+#include <stdexcept>
 
 #include "json.h"
 
@@ -31,15 +32,22 @@ struct Hasher {
     }
 };
 
-const std::unordered_map<std::string_view, int> wday_to_posw = 
+const std::unordered_map<int, std::string> posw_to_weekday = 
 {
-    {"Mon", 0},
-    {"Tue", 1},
-    {"Wed", 2},
-    {"Thu", 3},
-    {"Fri", 4},
-    {"Sat", 5},
-    {"Sun", 6}
+    {0, "Mon"},
+    {1, "Tues"},
+    {2, "Wednes"},
+    {3, "Thurs"},
+    {4, "Fri"}
+};
+
+const std::unordered_map<std::string_view, int> wday_ru_to_posw = 
+{
+    {"пн", 0},
+    {"вт", 1},
+    {"ср", 2},
+    {"чт", 3},
+    {"пт", 4}
 };
 
 const std::map<int,  mini_time> timezone_utc =
@@ -118,6 +126,45 @@ inline const std::string GetStringTime(const int timezone) {
     const std::string str_time = static_cast<std::string>(asctime(utc_time)).substr(11, 5);
     return str_time;
 }
+
+inline const std::string GetPhotoPath(std::string_view day) {
+    time_t unix_time = time(NULL);
+    tm* localtime_ = localtime(&unix_time);
+
+    std::string path = "/home/rgoerv/rgoerv_bot/lession_photos/";
+    
+    int week_day = 0;
+    if(day == "сегодня") {
+        week_day = localtime_->tm_wday - 1;
+    } else if (day == "завтра") {
+        week_day = localtime_->tm_wday;
+    } else {
+        try {
+            week_day = wday_ru_to_posw.at(day);
+        } catch(const std::exception& e) {
+            throw;
+        }
+    }
+    // std::cout << week_day << std::endl;
+    int week_number = (localtime_->tm_yday - week_day) / 7;
+
+    if((week_number % 2) > 0) {
+        const std::string blue = "blue_week/";
+        path += blue;
+    } else {
+        const std::string red = "red_week/";
+        path += red;
+    }
+    
+    const std::string wday_str = posw_to_weekday.at(week_day);
+    if(wday_str == "Thurs") {
+        throw std::invalid_argument(" ");
+    }
+    const std::string suffix = "day.jpg";
+    path += wday_str + suffix;
+
+    return path;
+} 
 
 } // namespace TimeManagement
 

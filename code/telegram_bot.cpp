@@ -95,13 +95,18 @@ int main() {
 
         std::string query_day = message->text.substr("/weather"s.size() + 1, message->text.npos);
 
-
-        const std::string photoFilePath = "Friday.jpg";
+        std::string photoFilePath;
         const std::string photoMimeType = "image/jpeg";
 
-        std::cout << std::filesystem::path(photoFilePath).filename().string() << std::endl;
+        try {
+            photoFilePath = TimeManagement::GetPhotoPath(query_day);
+        } catch(const std::exception& e) {
+            bot.getApi().sendMessage(message->chat->id, "In this day lessions don't exists"s);
+            return;
+        }
 
-        std::cout << "sendPhoto" << std::endl;
+        // std::cout << std::boolalpha << std::filesystem::exists(std::filesystem::path(photoFilePath)) << std::endl;
+
         bot.getApi().sendPhoto(message->chat->id, TgBot::InputFile::fromFile(photoFilePath, photoMimeType));
     });
 
