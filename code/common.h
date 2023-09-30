@@ -8,8 +8,6 @@
 #include <ctime>
 #include <stdexcept>
 
-#include "json.h"
-
 namespace TimeManagement {
 
 struct mini_time {
@@ -145,9 +143,8 @@ inline const std::string GetPhotoPath(std::string_view day) {
             throw;
         }
     }
-    // std::cout << week_day << std::endl;
-    int week_number = (localtime_->tm_yday - week_day) / 7;
 
+    int week_number = (localtime_->tm_yday - week_day) / 7;
     if((week_number % 2) > 0) {
         const std::string blue = "blue_week/";
         path += blue;
@@ -181,9 +178,11 @@ inline bool HandCommand(std::string request_text) {
     return true;
 }
 
-json::Document GetWeatherData(std::string response) {
-    std::istringstream is(response);
-    return json::Load(is);
+boost::property_tree::ptree GetWeatherData(std::string response) {
+    std::stringstream ss(response);
+    boost::property_tree::ptree pt;
+    boost::property_tree::read_json(ss, pt);
+    return pt;
 }
 
 } // namespace Common

@@ -1,3 +1,12 @@
+COMPILER=g++
+
+CPPFLAGS=--std=c++17
+tgflags=-I/usr/local/include -lTgBot -lboost_system -lssl -lcrypto -lpthread
+mybotflags=-lcurl
+
+SOURCES=./code/telegram_bot.cpp
+EXECUTABLE=telegram_bot
+
 all:
-	g++ ./code/json.cpp ./code/telegram_bot.cpp -o telegram_bot --std=c++17 -I/usr/local/include -lTgBot -lboost_system -lssl -lcrypto -lpthread -lcurl
-	./telegram_bot
+	$(COMPILER) $(SOURCES) -o $(EXECUTABLE) $(CPPFLAGS) $(tgflags) $(mybotflags)
+	./$(EXECUTABLE)

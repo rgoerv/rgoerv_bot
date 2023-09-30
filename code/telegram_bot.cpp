@@ -1,49 +1,37 @@
 #include "common.h"
-#include "json.h"
+#include "not_public.h"
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <tgbot/tgbot.h>
 
 #include <stdio.h>
 #include <time.h>
 
-#include <tgbot/tgbot.h>
-
 #include <string>
 #include <string_view>
 #include <iostream>
-#include <locale>
 #include <cstdio>
 #include <cstdlib>
 
-#include <filesystem>
-
 using namespace std::literals;
 
-/* */
-
-const int64_t admin_id = /* admin id */;
 const std::string ERROR_CODE = "404";
-const char BOT_TOKEN[] = ""/* bot token */;
 bool work_permisson = true;
 
-/* */
-
-// std::string url = "https://api.openweathermap.org/data/2.5/weather?q=Москва&units=metric&lang=ru&appid=79d1ca96933b0328e1c7e3e7a26cb347";
-
 int main() {
-
     TgBot::Bot bot(BOT_TOKEN);
 
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
         if(message->chat->firstName.empty()) {
             bot.getApi().sendMessage(message->chat->id, "Hi!");
-        }
-        else {
+        } else {
             bot.getApi().sendMessage(message->chat->id, "Hi, " + message->chat->firstName + '!');
         }
-        
     });
 
     bot.getEvents().onCommand("sleep", [&bot](TgBot::Message::Ptr message){
-        if(message->chat->id == admin_id) {
+        if(message->chat->id == ADMIN_ID) {
             bot.getApi().sendMessage(message->chat->id, "Goodbye! Zzz...");
             work_permisson = false;
             return;
@@ -62,20 +50,20 @@ int main() {
         }
 
         std::string city = message->text.substr("/weather"s.size() + 1, message->text.npos);
+
         const std::string url = u8"https://api.openweathermap.org/data/2.5/weather?q=" + city 
                         + u8"&units=metric&lang=ru&appid=79d1ca96933b0328e1c7e3e7a26cb347";
 
-        const json::Document response = Common::GetWeatherData(CurlReceiver::GetResponse(url.c_str()));
-        const auto& dict_data = response.GetRoot().AsDict();
+        const boost::property_tree::ptree& response = Common::GetWeatherData(CurlReceiver::GetResponse(url.c_str()));
 
-        if(dict_data.at("cod").IsString() && StringTools::startsWith(dict_data.at("cod").AsString(), ERROR_CODE)) {
-            bot.getApi().sendMessage(message->chat->id, dict_data.at("message").AsString());
+        if(StringTools::startsWith(response.get_child("cod").data(), ERROR_CODE)) {
+            bot.getApi().sendMessage(message->chat->id, response.get_child("message").data());
             return;
         }
         
-        const std::string temp = std::to_string(static_cast<int>(dict_data.at("main").AsDict().at("temp").AsDouble()));
-        const std::string feels_like = std::to_string(static_cast<int>(dict_data.at("main").AsDict().at("feels_like").AsDouble()));
-        const std::string str_time = TimeManagement::GetStringTime(dict_data.at("timezone").AsInt());
+        const std::string temp = std::to_string(static_cast<int>(response.get_child("main").get<double>("temp")));
+        const std::string feels_like = std::to_string(static_cast<int>(response.get_child("main").get<double>("feels_like")));
+        const std::string str_time = TimeManagement::GetStringTime(response.get<int>("timezone"));
         
         bot.getApi().sendMessage(message->chat->id, 
         ("Right now, weather in " + city + " : " + temp 
@@ -95,23 +83,14 @@ int main() {
 
         std::string query_day = message->text.substr("/weather"s.size() + 1, message->text.npos);
 
-        std::string photoFilePath;
+        const std::string photoFilePath = "Friday.jpg";
         const std::string photoMimeType = "image/jpeg";
 
-        try {
-            photoFilePath = TimeManagement::GetPhotoPath(query_day);
-        } catch(const std::exception& e) {
-            bot.getApi().sendMessage(message->chat->id, "In this day lessions don't exists"s);
-            return;
-        }
-
-        // std::cout << std::boolalpha << std::filesystem::exists(std::filesystem::path(photoFilePath)) << std::endl;
-
         bot.getApi().sendPhoto(message->chat->id, TgBot::InputFile::fromFile(photoFilePath, photoMimeType));
+        bot.getApi().setChatAdministratorCustomTitle(message->chat->id, ADMIN_ID, "aboba");
     });
 
     bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
-
         printf("User wrote %s\n", message->text.c_str());
         if(!Common::HandCommand(message->text) || message->text.empty()) {
             return;
@@ -129,6 +108,5 @@ int main() {
     } catch (TgBot::TgException& e) {
         printf("error: %s\n", e.what());
     }
-
     return 0;
 }
