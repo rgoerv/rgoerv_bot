@@ -20,7 +20,7 @@ const std::string ERROR_CODE = "404";
 bool work_permisson = true;
 
 int main() {
-    TgBot::Bot bot(BOT_TOKEN);
+    TgBot::Bot bot(static_cast<std::string>(BOT_TOKEN));
 
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
         if(message->chat->firstName.empty()) {
@@ -81,13 +81,13 @@ int main() {
             return;
         }
 
-        std::string query_day = message->text.substr("/weather"s.size() + 1, message->text.npos);
+        std::string query_day = message->text.substr("/lession"s.size() + 1, message->text.npos);
 
-        const std::string photoFilePath = "Friday.jpg";
+        const std::string photoFilePath = TimeManagement::GetPhotoPath(query_day);
         const std::string photoMimeType = "image/jpeg";
-
+        
         bot.getApi().sendPhoto(message->chat->id, TgBot::InputFile::fromFile(photoFilePath, photoMimeType));
-        bot.getApi().setChatAdministratorCustomTitle(message->chat->id, ADMIN_ID, "aboba");
+        // bot.getApi().setChatAdministratorCustomTitle(message->chat->id, ADMIN_ID, "aboba");
     });
 
     bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
