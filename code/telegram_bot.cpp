@@ -1,4 +1,5 @@
 #include "common.h"
+#include "time_process.h"
 #include "not_public.h"
 
 #include <boost/property_tree/ptree.hpp>
@@ -13,6 +14,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
 
 using namespace std::literals;
 
@@ -22,12 +24,19 @@ bool work_permisson = true;
 int main() {
     TgBot::Bot bot(static_cast<std::string>(BOT_TOKEN));
 
+    time_t unix_time = time(NULL);
+    tm* localtime_ = localtime(&unix_time);
+
+    std::ofstream LOG("log.txt", std::ios::binary|std::ios::out|std::ios::app);
+
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
-        if(message->chat->firstName.empty()) {
-            bot.getApi().sendMessage(message->chat->id, "Hi!");
-        } else {
-            bot.getApi().sendMessage(message->chat->id, "Hi, " + message->chat->firstName + '!');
-        }
+        try {
+            if(message->chat->firstName.empty()) {
+                bot.getApi().sendMessage(message->chat->id, "Hi!");
+            } else {
+                bot.getApi().sendMessage(message->chat->id, "Hi, " + message->chat->firstName + '!');
+            }
+        } catch(...) { } 
     });
 
     bot.getEvents().onCommand("sleep", [&bot](TgBot::Message::Ptr message){
@@ -63,7 +72,7 @@ int main() {
         
         const std::string temp = std::to_string(static_cast<int>(response.get_child("main").get<double>("temp")));
         const std::string feels_like = std::to_string(static_cast<int>(response.get_child("main").get<double>("feels_like")));
-        const std::string str_time = TimeManagement::GetStringTime(response.get<int>("timezone"));
+        const std::string str_time = time_processor::GetStringTime(response.get<int>("timezone"));
         
         bot.getApi().sendMessage(message->chat->id, 
         ("Right now, weather in " + city + " : " + temp 
@@ -83,14 +92,29 @@ int main() {
 
         std::string query_day = message->text.substr("/lession"s.size() + 1, message->text.npos);
 
-        const std::string photoFilePath = TimeManagement::GetPhotoPath(query_day);
+        const std::string photoFilePath = std::invoke([&bot, &message, &query_day](){
+            try {
+                return time_processor::GetPhotoPath(query_day);
+            } catch(const std::invalid_argument& e) {
+                bot.getApi().sendMessage(message->chat->id, e.what());
+                return ""s;
+            }
+        });
+
+        if(photoFilePath.empty()) {
+            return;
+        }
+        
         const std::string photoMimeType = "image/jpeg";
         
         bot.getApi().sendPhoto(message->chat->id, TgBot::InputFile::fromFile(photoFilePath, photoMimeType));
-        // bot.getApi().setChatAdministratorCustomTitle(message->chat->id, ADMIN_ID, "aboba");
     });
 
-    bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
+    bot.getEvents().onAnyMessage([&bot, &localtime_, &LOG](TgBot::Message::Ptr message) {
+        std::string info = static_cast<std::string>(asctime(localtime_)) + " USER "s + message->from->username + " WROTE: "s + message->text + "\n"s;
+        LOG.write(reinterpret_cast<const char*>(info.data()), info.size());
+        // LOG << info;
+
         printf("User wrote %s\n", message->text.c_str());
         if(!Common::HandCommand(message->text) || message->text.empty()) {
             return;
@@ -100,6 +124,10 @@ int main() {
 
     //
     try {
+        std::string header_info = static_cast<std::string>(asctime(localtime_)) + " BOT USERNAME: "s + bot.getApi().getMe()->username + "\n"s;
+        // LOG << header_info;
+        LOG.write(reinterpret_cast<const char*>(header_info.data()), header_info.size());
+        
         printf("Bot username: %s\n", bot.getApi().getMe()->username.c_str());
         TgBot::TgLongPoll longPoll(bot);
         while (work_permisson) {
