@@ -12,9 +12,9 @@
 #include <ctime>
 #include <stdexcept>
 
-namespace Common {
+namespace common {
 
-std::unordered_set<std::string> commands = {"start", "time", "weather", "sleep"};
+const std::unordered_set<std::string> commands = {"start", "time", "weather", "sleep"};
 
 inline bool HandCommand(std::string request_text) {
     for(const auto& command : commands) {
@@ -25,36 +25,38 @@ inline bool HandCommand(std::string request_text) {
     return true;
 }
 
-boost::property_tree::ptree GetWeatherData(std::string response) {
+void GetWeatherData(boost::property_tree::ptree& pt, std::string response) {
     std::stringstream ss(response);
-    boost::property_tree::ptree pt;
     boost::property_tree::read_json(ss, pt);
-    return pt;
 }
 
-} // namespace Common
+} // namespace common
 
-namespace CurlReceiver {
+namespace http_processor {
 
-static size_t Writer(char* buffer, size_t size, size_t nmemb, std::string* html) {
-    size_t result = 0;
-    if(buffer != NULL) {
-        html->append(buffer, size * nmemb);
-        result = size * nmemb;
+inline void get_http_response(std::string& response_str, const std::string& in_city) {
+    
+    const std::string host_ip = u8"api.openweathermap.org";
+    const std::string target = u8"/data/2.5/weather?q=" + in_city 
+        + u8"&units=metric&lang=ru&appid=79d1ca96933b0328e1c7e3e7a26cb347";
+
+    boost::asio::io_context ioc;
+
+    boost::asio::ip::tcp::resolver resolver(ioc);
+    boost::asio::ip::tcp::socket socket(ioc);
+    boost::asio::connect(socket, resolver.resolve(host_ip, "80"));
+            
+    boost::beast::http::request<boost::beast::http::string_body> req(boost::beast::http::verb::get, target, 11);
+    req.set(boost::beast::http::field::host, host_ip);
+    req.set(boost::beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+    boost::beast::http::write(socket, req);
+     
+    {
+        boost::beast::flat_buffer buffer;
+        boost::beast::http::response<boost::beast::http::dynamic_body> res;
+        boost::beast::http::read(socket, buffer, res);
+        response_str = boost::beast::buffers_to_string(res.body().data());
     }
-    return result;
 }
 
-inline std::string GetResponse(const char* link) {
-    CURL* curl;
-    std::string data;
-    curl = curl_easy_init();
-    curl_easy_setopt(curl, CURLOPT_URL, link);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, Writer);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
-    curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
-    return data;
-}
-
-} // namepspace CurlReceiver
+} // namepspace http_processor
