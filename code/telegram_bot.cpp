@@ -2,6 +2,8 @@
 #include "time_process.h"
 #include "not_public.h"
 
+#include "log.h"
+
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <tgbot/tgbot.h>
@@ -27,7 +29,9 @@ int main() {
     time_t unix_time = time(NULL);
     tm* localtime_ = localtime(&unix_time);
 
-    std::ofstream LOG("log.txt", std::ios::binary|std::ios::out|std::ios::app);
+    LOG<TgBot::Bot> log;
+
+    // std::ofstream LOG("log.txt", std::ios::binary|std::ios::out|std::ios::app);
 
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
         try {
@@ -97,13 +101,17 @@ int main() {
         // сегодня завтра пн вт ср чт пт // текущей недели
         try {
             std::string_view lession_query = message->text;
-            const std::string lession_str = "/lession";
-            if(!(lession_str.size() + 1 < lession_query.size())) {
-                bot.getApi().sendMessage(message->chat->id, "Please, write correct query(сегодня завтра пн вт ср чт пт).");
+            lession_query.remove_prefix("/weather"s.size());
+
+            if(size_t cityname_begin = lession_query.find_first_not_of(' ');
+                cityname_begin == lession_query.npos) {
+                bot.getApi().sendMessage(message->chat->id, "Please, write a city name."s);
                 return;
+            } else {
+                lession_query.remove_prefix(cityname_begin);
             }
 
-            std::string query_day = message->text.substr("/lession"s.size() + 1, message->text.npos);
+            const std::string query_day = static_cast<std::string>(lession_query);
 
             const std::string photoFilePath = std::invoke([&bot, &message, &query_day](){
                 try {
@@ -125,9 +133,11 @@ int main() {
         }
     });
 
-    bot.getEvents().onAnyMessage([&bot, &localtime_, &LOG](TgBot::Message::Ptr message) {
-        std::string info = static_cast<std::string>(asctime(localtime_)) + " USER "s + message->from->username + " WROTE: "s + message->text + "\n"s;
-        LOG.write(reinterpret_cast<const char*>(info.data()), info.size());
+    bot.getEvents().onAnyMessage([&bot, &localtime_, &log](TgBot::Message::Ptr message) {
+        log.write(" USER "s, message->from->username, " WROTE: "s, message->text, "\n"s);
+        // const std::string info = static_cast<std::string>(asctime(localtime_)) 
+        //                         + " USER "s + message->from->username + " WROTE: "s + message->text + "\n"s;
+        // LOG.write(reinterpret_cast<const char*>(info.data()), info.size());
 
         printf("User wrote %s\n", message->text.c_str());
         if(!common::HandCommand(message->text) || message->text.empty()) {
@@ -138,9 +148,11 @@ int main() {
 
     //
     try {
-        std::string header_info = static_cast<std::string>(asctime(localtime_)) + " BOT USERNAME: "s + bot.getApi().getMe()->username + "\n"s;
-        // LOG << header_info;
-        LOG.write(reinterpret_cast<const char*>(header_info.data()), header_info.size());
+        log.write(" BOT USERNAME: "s, bot.getApi().getMe()->username , "\n"s);
+
+        // const std::string header_info = static_cast<std::string>(asctime(localtime_)) 
+        //                                 + " BOT USERNAME: "s + bot.getApi().getMe()->username + "\n"s;
+        // LOG.write(reinterpret_cast<const char*>(header_info.data()), header_info.size());
         
         printf("Bot username: %s\n", bot.getApi().getMe()->username.c_str());
         TgBot::TgLongPoll longPoll(bot);
@@ -148,10 +160,10 @@ int main() {
             longPoll.start();
         }
     } catch (TgBot::TgException& e) {
-        std::string error_info = static_cast<std::string>(asctime(localtime_)) + " error: " + e.what();
-        LOG.write(reinterpret_cast<const char*>(error_info.data()), error_info.size());
+        log.write(" error: ", e.what());
+        // const std::string error_info = static_cast<std::string>(asctime(localtime_)) + " error: " + e.what();
+        // LOG.write(reinterpret_cast<const char*>(error_info.data()), error_info.size());
         printf("error: %s\n", e.what());
-        LOG.close();
     }
     return 0;
 }
