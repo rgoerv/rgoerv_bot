@@ -112,7 +112,6 @@ int main() {
             }
 
             const std::string query_day = static_cast<std::string>(lession_query);
-
             const std::string photoFilePath = std::invoke([&bot, &message, &query_day](){
                 try {
                     return time_processor::GetPhotoPath(query_day);
@@ -134,12 +133,9 @@ int main() {
     });
 
     bot.getEvents().onAnyMessage([&bot, &localtime_, &log](TgBot::Message::Ptr message) {
-        log.write(" USER "s, message->from->username, " WROTE: "s, message->text, "\n"s);
-        // const std::string info = static_cast<std::string>(asctime(localtime_)) 
-        //                         + " USER "s + message->from->username + " WROTE: "s + message->text + "\n"s;
-        // LOG.write(reinterpret_cast<const char*>(info.data()), info.size());
-
+        log.write("user"s, message->from->username, "wrote:"s, message->text, "\n"s);
         printf("User wrote %s\n", message->text.c_str());
+
         if(!common::HandCommand(message->text) || message->text.empty()) {
             return;
         }
@@ -148,21 +144,15 @@ int main() {
 
     //
     try {
-        log.write(" BOT USERNAME: "s, bot.getApi().getMe()->username , "\n"s);
-
-        // const std::string header_info = static_cast<std::string>(asctime(localtime_)) 
-        //                                 + " BOT USERNAME: "s + bot.getApi().getMe()->username + "\n"s;
-        // LOG.write(reinterpret_cast<const char*>(header_info.data()), header_info.size());
-        
+        log.write("Bot username:"s, bot.getApi().getMe()->username, "\n"s);
         printf("Bot username: %s\n", bot.getApi().getMe()->username.c_str());
+
         TgBot::TgLongPoll longPoll(bot);
         while (work_permisson) {
             longPoll.start();
         }
     } catch (TgBot::TgException& e) {
-        log.write(" error: ", e.what());
-        // const std::string error_info = static_cast<std::string>(asctime(localtime_)) + " error: " + e.what();
-        // LOG.write(reinterpret_cast<const char*>(error_info.data()), error_info.size());
+        log.write("error:", e.what());
         printf("error: %s\n", e.what());
     }
     return 0;
