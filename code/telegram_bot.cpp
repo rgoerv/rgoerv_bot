@@ -29,9 +29,7 @@ int main() {
     time_t unix_time = time(NULL);
     tm* localtime_ = localtime(&unix_time);
 
-    LOG<TgBot::Bot> log;
-
-    // std::ofstream LOG("log.txt", std::ios::binary|std::ios::out|std::ios::app);
+    LOG log;
 
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
         try {

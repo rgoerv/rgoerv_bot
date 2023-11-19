@@ -2,7 +2,6 @@
 #include <fstream>
 #include <string>
 
-template<class Handler>
 class LOG {
 public:
     LOG() : unix_time(time(NULL)), localtime_(localtime(&unix_time)) {
@@ -45,7 +44,5 @@ public:
 private:
     time_t unix_time;
     tm* localtime_;
-
-    Handler* bot_handler = nullptr;
     std::ofstream LOG_STREAM;
 };
