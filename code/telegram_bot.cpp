@@ -130,9 +130,18 @@ int main() {
         }
     });
 
+    const std::unordered_set<std::string> noMessages = {"Нет", "нет", "Неа", "неа", "No", "no"};
+
     bot.getEvents().onAnyMessage([&bot, &localtime_, &log](TgBot::Message::Ptr message) {
         log.write("user"s, message->from->username, "wrote:"s, message->text, "\n"s);
         printf("User wrote %s\n", message->text.c_str());
+
+        // joke
+        for(const auto& noMessages : noMessage) {
+            if(message->text == noMessages) {
+                bot.getApi().sendMessage(message->chat->id, "Да");
+            }
+        }
 
         if(!common::HandCommand(message->text) || message->text.empty()) {
             return;
